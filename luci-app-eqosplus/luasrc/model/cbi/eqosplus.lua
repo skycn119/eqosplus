@@ -55,7 +55,7 @@ local lan_ifaces = get_lan_interfaces()
 for _, iface in ipairs(lan_ifaces) do
     -- 避免重复添加 br-lan
     if iface.name ~= "br-lan" then
-        ipi:value(iface.name, translate(iface.name.."(LAN)") .. " (" .. iface.logical_name .. ")")
+        ipi:value(iface.name, translate(iface.name) .. " (" .. iface.logical_name .. ")")
     end
 end
 local function get_wan_interfaces()
