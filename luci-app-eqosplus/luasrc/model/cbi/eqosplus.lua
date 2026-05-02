@@ -21,7 +21,43 @@ e.value = translate("Collecting data...")
 ipi = t:option(ListValue, "ifname", translate("Interface"), translate("Set the interface used for restriction, use pppoe-wan for dialing, use WAN hardware interface for DHCP mode (such as eth1), and use br-lan for bypass mode"))
 ipi.default = "1"
 ipi:value(1,translate("Automatic settings"))
-ipi:value("br-lan", translate("br-lan (LAN Bridge)"))
+-- 先添加 br-lan（如果存在）
+ipi:value("br-lan", translate("br-lan (LAN)"))
+-- 添加所有 LAN 接口
+local function get_lan_interfaces()
+    local result = {}
+    local ubus = require "ubus"
+    
+    local conn = ubus.connect()
+    if not conn then
+        return result
+    end
+
+    local network_status = conn:call("network.interface", "dump", {})
+    for _, iface in ipairs(network_status.interface) do
+        -- 匹配所有以 "lan" 开头的接口（包括 lan2, lan3 等）
+        if iface.interface:match("^lan") then
+            local dev = iface.l3_device or iface.device
+            if dev then
+                table.insert(result, {
+                    name = dev,
+                    logical_name = iface.interface
+                })
+            end
+        end
+    end
+
+    conn:close()
+    return result
+end
+-- 添加所有检测到的 LAN 接口
+local lan_ifaces = get_lan_interfaces()
+for _, iface in ipairs(lan_ifaces) do
+    -- 避免重复添加 br-lan
+    if iface.name ~= "br-lan" then
+        ipi:value(iface.name, translate(iface.name.."(LAN)") .. " (" .. iface.logical_name .. ")")
+    end
+end
 local function get_wan_interfaces()
     local result = {}
     local ubus = require "ubus"
